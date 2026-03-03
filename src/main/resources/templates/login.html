@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login – ClassPulse</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>ClassPulse</h1>
+      <p>Teacher Performance Dashboard</p>
+    </div>
+
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-subtitle">Sign in to your teacher account</p>
+
+    <div th:if="${param.error}" class="alert alert-danger">
+      ✕ Invalid email or password. Please try again.
+    </div>
+    <div th:if="${param.logout}" class="alert alert-info">
+      ✓ You have been logged out successfully.
+    </div>
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+    <form th:action="@{/login}" method="post">
+      <div class="form-group">
+        <label class="form-label" for="username">Email Address</label>
+        <input id="username" name="username" type="email" class="form-control"
+               placeholder="teacher@example.com" required autofocus/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" name="password" type="password" class="form-control"
+               placeholder="Enter your password" required/>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top: 0.5rem;">
+        Sign In →
+      </button>
+    </form>
+
+    <p style="text-align:center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+      Don't have an account?
+      <a th:href="@{/register}" style="color: var(--primary-light); font-weight: 600;">Register here</a>
+    </p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="'Marks – ' + ${test.name} + ' – ClassPulse'">Marks – ClassPulse</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">Class<span>Pulse</span></div>
+        <div class="nav-actions">
+            <a th:href="@{/classes/{id}(id=${classId})}" class="btn btn-secondary btn-sm">← Back to Class</a>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container page-content">
+        <div style="max-width: 700px; margin: 0 auto;">
+
+            <div class="page-header">
+                <div class="page-header-title">
+                    <div class="breadcrumb">
+                        <a th:href="@{/dashboard}">Dashboard</a>
+                        <span class="sep">›</span>
+                        <a th:href="@{/classes/{id}(id=${classId})}">Class</a>
+                        <span class="sep">›</span>
+                        <span>Mark List</span>
+                    </div>
+                    <h2 th:text="'Marks: ' + ${test.name}">Mark List</h2>
+                    <p>
+                        <span class="badge badge-primary" th:text="'Max Marks: ' + ${test.maxMarks}">Max: 100</span>
+                        <span class="badge badge-secondary" style="margin-left:0.5rem;"
+                            th:text="'Date: ' + ${test.testDate}" th:if="${test.testDate != null}">Date</span>
+                    </p>
+                </div>
+                <div style="display:flex; gap:0.5rem;">
+                    <a th:href="@{/classes/{cid}/tests/{tid}/marks(cid=${classId},tid=${test.id})}"
+                        class="btn btn-secondary btn-sm">✏ Edit Marks</a>
+                    <a th:href="@{/classes/{cid}/tests/{tid}/analytics(cid=${classId},tid=${test.id})}"
+                        class="btn btn-primary btn-sm">📊 Test Analytics</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Student Marks</span>
+                    <span class="badge badge-primary" th:text="${students.size()} + ' students'">0 students</span>
+                </div>
+
+                <div th:if="${students.isEmpty()}" class="empty-state">
+                    <div class="empty-icon">👤</div>
+                    <p>No students in this class.</p>
+                </div>
+
+                <div th:if="${!students.isEmpty()}" class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th style="text-align:center;">Marks Obtained</th>
+                                <th style="text-align:center;">Out of</th>
+                                <th style="text-align:center;">Percentage</th>
+                                <th style="text-align:center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="student, iterStat : ${students}">
+                                <td th:text="${iterStat.count}">1</td>
+                                <td th:text="${student.rollNumber ?: '-'}">-</td>
+                                <td th:text="${student.name}">Name</td>
+
+                                <!-- Marks entered -->
+                                <td style="text-align:center; font-weight:700;"
+                                    th:if="${existingMarks[student.id] != null}" th:text="${existingMarks[student.id]}">
+                                    0</td>
+                                <!-- Marks not entered -->
+                                <td style="text-align:center; color:var(--text-muted);"
+                                    th:if="${existingMarks[student.id] == null}">–</td>
+
+                                <td style="text-align:center;" th:text="${test.maxMarks}">100</td>
+
+                                <!-- Percentage -->
+                                <td style="text-align:center;" th:if="${existingMarks[student.id] != null}">
+                                    <span
+                                        th:with="pct=${#numbers.formatDecimal(existingMarks[student.id] / test.maxMarks * 100, 1, 1)}"
+                                        th:text="${pct} + '%'" style="font-weight:600;"></span>
+                                </td>
+                                <td style="text-align:center; color:var(--text-muted);"
+                                    th:if="${existingMarks[student.id] == null}">–</td>
+
+                                <!-- Category -->
+                                <td style="text-align:center;" th:if="${existingMarks[student.id] != null}">
+                                    <span th:with="pct=${existingMarks[student.id] / test.maxMarks * 100}">
+                                        <span th:if="${pct >= 90}" class="cat-excellent">Excellent</span>
+                                        <span th:if="${pct >= 75 and pct < 90}" class="cat-very-good">Very Good</span>
+                                        <span th:if="${pct >= 50 and pct < 75}" class="cat-average">Average</span>
+                                        <span th:if="${pct < 50}" class="cat-needs-improvement">Needs Improvement</span>
+                                    </span>
+                                </td>
+                                <td style="text-align:center;" th:if="${existingMarks[student.id] == null}">
+                                    <span style="color:var(--text-muted); font-size:0.8rem;">Not Entered</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border); display:flex; gap:0.75rem;">
+                    <a th:href="@{/classes/{cid}/tests/{tid}/marks(cid=${classId},tid=${test.id})}"
+                        class="btn btn-primary">✏ Edit Marks</a>
+                    <a th:href="@{/classes/{cid}/tests/{tid}/analytics(cid=${classId},tid=${test.id})}"
+                        class="btn btn-secondary">📊 Test Analytics</a>
+                    <a th:href="@{/classes/{id}(id=${classId})}" class="btn btn-secondary" style="margin-left:auto;">
+                        ← Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

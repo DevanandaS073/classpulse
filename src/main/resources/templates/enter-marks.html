@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enter Marks – ClassPulse</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-brand">Class<span>Pulse</span></div>
+        <div class="nav-actions">
+            <a th:href="@{/classes/{id}(id=${classId})}" class="btn btn-secondary btn-sm">← Back to Class</a>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container page-content">
+        <div style="max-width: 700px; margin: 0 auto;">
+
+            <div class="page-header">
+                <div class="page-header-title">
+                    <div class="breadcrumb">
+                        <a th:href="@{/dashboard}">Dashboard</a>
+                        <span class="sep">›</span>
+                        <a th:href="@{/classes/{id}(id=${classId})}">Class</a>
+                        <span class="sep">›</span>
+                        <span>Enter Marks</span>
+                    </div>
+                    <h2 th:text="'Marks: ' + ${test.name}">Enter Marks</h2>
+                    <p>
+                        <span class="badge badge-primary" th:text="'Maximum Marks: ' + ${test.maxMarks}">Max: 100</span>
+                        <span class="badge badge-secondary" style="margin-left:0.5rem;" th:text="${test.testDate}"
+                            th:if="${test.testDate != null}">Date</span>
+                    </p>
+                </div>
+            </div>
+
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Student Marks</span>
+                    <small style="color:var(--text-muted);">Enter marks (0 – <span
+                            th:text="${test.maxMarks}">100</span>)</small>
+                </div>
+
+                <div th:if="${students.isEmpty()}" class="empty-state">
+                    <div class="empty-icon">👤</div>
+                    <p>No students in this class. Add students first.</p>
+                </div>
+
+                <form th:if="${!students.isEmpty()}"
+                    th:action="@{/classes/{cid}/tests/{tid}/marks/save(cid=${classId},tid=${test.id})}" method="post">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Roll No.</th>
+                                    <th>Student Name</th>
+                                    <th style="text-align:center;">Marks Obtained</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="student, iterStat : ${students}">
+                                    <td th:text="${iterStat.count}">1</td>
+                                    <td th:text="${student.rollNumber ?: '-'}">-</td>
+                                    <td th:text="${student.name}">Name</td>
+                                    <td style="text-align:center;">
+                                        <input type="number" th:name="'marks_' + ${student.id}"
+                                            th:value="${existingMarks[student.id]}" class="form-control marks-input"
+                                            min="0" th:max="${test.maxMarks}" step="0.5" placeholder="–" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding: 1.25rem; border-top: 1px solid var(--border); display:flex; gap:0.75rem;">
+                        <button type="submit" class="btn btn-primary btn-lg">💾 Save All Marks</button>
+                        <a th:href="@{/classes/{id}(id=${classId})}" class="btn btn-secondary btn-lg">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Validate marks don't exceed max on client side
+        const maxMarks = [[${ test.maxMarks }]];
+        document.querySelectorAll('.marks-input').forEach(input => {
+            input.addEventListener('change', function () {
+                const val = parseFloat(this.value);
+                if (val > maxMarks) {
+                    this.style.borderColor = 'var(--danger)';
+                } else {
+                    this.style.borderColor = '';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

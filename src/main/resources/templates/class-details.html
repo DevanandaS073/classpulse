@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${schoolClass.name} + ' – ClassPulse'">Class – ClassPulse</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-brand">Class<span>Pulse</span></div>
+        <div class="nav-actions">
+            <a th:href="@{/dashboard}" class="btn btn-secondary btn-sm">← Dashboard</a>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container page-content">
+
+        <!-- Alerts -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${studentError}" class="alert alert-danger" th:text="${studentError}"></div>
+        <div th:if="${testError}" class="alert alert-warning" th:text="${testError}"></div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-title">
+                <div class="breadcrumb">
+                    <a th:href="@{/dashboard}">Dashboard</a>
+                    <span class="sep">›</span>
+                    <span th:text="${schoolClass.name}">Class</span>
+                </div>
+                <h2 th:text="${schoolClass.name}">Class Name</h2>
+                <p>
+                    <span class="badge badge-secondary" th:text="${schoolClass.subject}">Subject</span>
+                    &nbsp;
+                    <span class="badge badge-primary"
+                        th:text="${schoolClass.academicYear == T(com.classpulse.model.AcademicYear).FIRST_YEAR ? 'First Year' : 'Second Year'}">Year</span>
+                </p>
+            </div>
+            <a th:href="@{/classes/{id}/analytics(id=${schoolClass.id})}" class="btn btn-primary">
+                📊 View Analytics
+            </a>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="stats-grid"
+            style="grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); margin-bottom: 1.5rem;">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${students.size()}">0</div>
+                <div class="stat-label">Students</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-value" th:text="${tests.size()}">0</div>
+                <div class="stat-label">Tests</div>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab-link active" onclick="switchTab('students', this)">👥 Students</button>
+            <button class="tab-link" onclick="switchTab('tests', this)">📝 Tests &amp; Marks</button>
+        </div>
+
+        <!-- TAB: STUDENTS -->
+        <div id="tab-students" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Student List</span>
+                </div>
+                <!-- Add Student Form -->
+                <div class="card-body" style="border-bottom: 1px solid var(--border);">
+                    <form th:action="@{/classes/{id}/students/add(id=${schoolClass.id})}" method="post"
+                        th:object="${newStudent}" style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                        <input type="text" th:field="*{name}" class="form-control" placeholder="Student name *"
+                            style="flex:2; min-width:180px;" required />
+                        <input type="text" th:field="*{rollNumber}" class="form-control"
+                            placeholder="Roll number (optional)" style="flex:1; min-width:130px;" />
+                        <button type="submit" class="btn btn-primary">+ Add Student</button>
+                    </form>
+                </div>
+                <!-- Student Table -->
+                <div class="table-wrapper">
+                    <table th:if="${!students.isEmpty()}">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th style="text-align:right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="student, iterStat : ${students}">
+                                <td th:text="${iterStat.count}">1</td>
+                                <td th:text="${student.rollNumber ?: '-'}">-</td>
+                                <td th:text="${student.name}">Name</td>
+                                <td style="text-align:right;">
+                                    <form
+                                        th:action="@{/classes/{cid}/students/{sid}/delete(cid=${schoolClass.id},sid=${student.id})}"
+                                        method="post" style="display:inline;"
+                                        onsubmit="return confirm('Remove this student?')">
+                                        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div th:if="${students.isEmpty()}" class="empty-state">
+                        <div class="empty-icon">👤</div>
+                        <p>No students yet. Add your first student above.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: TESTS & MARKS -->
+        <div id="tab-tests" class="tab-content">
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">Add New Test</span>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/classes/{id}/tests/add(id=${schoolClass.id})}" method="post"
+                        th:object="${newTest}" style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                        <input type="text" th:field="*{name}" class="form-control" placeholder="Test name *"
+                            style="flex:2; min-width:180px;" required />
+                        <input type="number" th:field="*{maxMarks}" class="form-control" placeholder="Max marks *"
+                            min="1" style="flex:1; min-width:110px;" required />
+                        <input type="date" th:field="*{testDate}" class="form-control"
+                            style="flex:1; min-width:150px;" />
+                        <button type="submit" class="btn btn-primary">+ Add Test</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tests List -->
+            <div th:if="${!tests.isEmpty()}">
+                <div th:each="test : ${tests}" class="card" style="margin-bottom: 1rem;">
+                    <div class="card-header">
+                        <div>
+                            <span class="card-title" th:text="${test.name}">Test</span>
+                            <span class="badge badge-primary" style="margin-left:0.5rem;"
+                                th:text="'Max: ' + ${test.maxMarks}">Max: 100</span>
+                            <span class="badge badge-secondary" style="margin-left:0.25rem;" th:text="${test.testDate}"
+                                th:if="${test.testDate != null}">Date</span>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <a th:href="@{/classes/{cid}/tests/{tid}/marks/view(cid=${schoolClass.id},tid=${test.id})}"
+                                class="btn btn-secondary btn-sm">📋 View Marks</a>
+                            <a th:href="@{/classes/{cid}/tests/{tid}/marks(cid=${schoolClass.id},tid=${test.id})}"
+                                class="btn btn-success btn-sm">✏ Enter Marks</a>
+                            <a th:href="@{/classes/{cid}/tests/{tid}/analytics(cid=${schoolClass.id},tid=${test.id})}"
+                                class="btn btn-primary btn-sm">📊 Test Analytics</a>
+                            <form th:action="@{/classes/{cid}/tests/{tid}/delete(cid=${schoolClass.id},tid=${test.id})}"
+                                method="post" style="display:inline;"
+                                onsubmit="return confirm('Delete this test and all its marks?')">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${tests.isEmpty()}" class="empty-state">
+                <div class="empty-icon">📝</div>
+                <p>No tests yet. Add your first test above.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(name, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // Auto-switch to tests tab if test or marks action
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'tests') {
+            switchTab('tests', document.querySelectorAll('.tab-link')[1]);
+        }
+    </script>
+</body>
+
+</html>

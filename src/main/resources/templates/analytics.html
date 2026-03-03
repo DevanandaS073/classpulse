@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analytics – ClassPulse</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-brand">Class<span>Pulse</span></div>
+        <div class="nav-actions">
+            <a th:href="@{/classes/{id}(id=${classId})}" class="btn btn-secondary btn-sm">← Back to Class</a>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container page-content">
+
+        <!-- Header -->
+        <div class="page-header">
+            <div class="page-header-title">
+                <div class="breadcrumb">
+                    <a th:href="@{/dashboard}">Dashboard</a>
+                    <span class="sep">›</span>
+                    <a th:href="@{/classes/{id}(id=${classId})}" th:text="${schoolClass.name}">Class</a>
+                    <span class="sep">›</span>
+                    <span>Analytics</span>
+                </div>
+                <h2>Class Analytics</h2>
+                <p>
+                    <span class="badge badge-secondary" th:text="${schoolClass.subject}">Subject</span>
+                    <span class="badge badge-primary" style="margin-left:0.4rem;"
+                        th:text="${schoolClass.academicYear == T(com.classpulse.model.AcademicYear).FIRST_YEAR ? 'First Year' : 'Second Year'}">Year</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- No data state -->
+        <div th:if="${analytics.totalStudents == 0 or analytics.totalTests == 0}" class="card">
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <p>Add students and tests with marks to view analytics.</p>
+            </div>
+        </div>
+
+        <div th:if="${analytics.totalStudents > 0 and analytics.totalTests > 0}">
+
+            <!-- Summary Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${analytics.totalStudents}">0</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" th:text="${analytics.totalTests}">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" th:text="${analytics.overallClassAverage} + '%'">0%</div>
+                    <div class="stat-label">Class Average</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value"
+                        th:text="${analytics.topStudent != null ? analytics.topStudent.studentName.split(' ')[0] : '-'}">
+                        –</div>
+                    <div class="stat-label">Top Student</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value" th:text="${analytics.studentsBelow40.size()}">0</div>
+                    <div class="stat-label">Below 40%</div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+
+                <!-- Bar Chart: Class avg per test -->
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Class Average Per Test</span></div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bar Chart: Top 5 students -->
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Top 5 Students</span></div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="top5Chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Performance Table -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header"><span class="card-title">All Students Performance</span></div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll No.</th>
+                                <th style="text-align:center;">Total</th>
+                                <th style="text-align:center;">Average</th>
+                                <th style="text-align:center;">Percentage</th>
+                                <th style="text-align:center;">Highest</th>
+                                <th style="text-align:center;">Lowest</th>
+                                <th style="text-align:center;">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${analytics.studentStatsList}">
+                                <td th:text="${s.studentName}">Name</td>
+                                <td th:text="${s.rollNumber ?: '-'}">-</td>
+                                <td style="text-align:center;" th:text="${s.totalMarks}">0</td>
+                                <td style="text-align:center;" th:text="${s.average}">0</td>
+                                <td style="text-align:center;">
+                                    <div th:text="${s.percentage} + '%'" style="font-weight:600;"></div>
+                                    <div class="progress-bar-wrap" style="margin-top:4px;">
+                                        <div class="progress-bar" th:style="'width:' + ${s.percentage} + '%'"></div>
+                                    </div>
+                                </td>
+                                <td style="text-align:center;" th:text="${s.highestScore}">0</td>
+                                <td style="text-align:center;" th:text="${s.lowestScore}">0</td>
+                                <td style="text-align:center;">
+                                    <span th:if="${s.category == 'Excellent'}" class="cat-excellent">Excellent</span>
+                                    <span th:if="${s.category == 'Very Good'}" class="cat-very-good">Very Good</span>
+                                    <span th:if="${s.category == 'Average'}" class="cat-average">Average</span>
+                                    <span th:if="${s.category == 'Needs Improvement'}"
+                                        class="cat-needs-improvement">Needs Improvement</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Below 40% Alert -->
+            <div th:if="${!analytics.studentsBelow40.isEmpty()}" class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: rgba(239,68,68,0.08);">
+                    <span class="card-title" style="color: var(--danger);">⚠ Students Below 40%</span>
+                    <span class="badge badge-danger" th:text="${analytics.studentsBelow40.size()} + ' students'"></span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll No.</th>
+                                <th style="text-align:center;">Percentage</th>
+                                <th style="text-align:center;">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${analytics.studentsBelow40}" style="background: rgba(239,68,68,0.05);">
+                                <td th:text="${s.studentName}">Name</td>
+                                <td th:text="${s.rollNumber ?: '-'}">-</td>
+                                <td style="text-align:center; color: var(--danger); font-weight:700;"
+                                    th:text="${s.percentage} + '%'">0%</td>
+                                <td style="text-align:center;">
+                                    <span class="cat-needs-improvement">Needs Improvement</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top 5 List -->
+            <div class="card">
+                <div class="card-header"><span class="card-title">🏆 Top 5 Students</span></div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Student</th>
+                                <th>Roll No.</th>
+                                <th style="text-align:center;">Percentage</th>
+                                <th style="text-align:center;">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s, iterStat : ${analytics.top5Students}">
+                                <td>
+                                    <span th:text="'#' + ${iterStat.count}"
+                                        th:style="${iterStat.index == 0} ? 'font-size:1.1rem;' : ''">#1</span>
+                                </td>
+                                <td>
+                                    <strong th:if="${iterStat.index == 0}" th:text="${s.studentName}">Name</strong>
+                                    <span th:if="${iterStat.index > 0}" th:text="${s.studentName}">Name</span>
+                                </td>
+                                <td th:text="${s.rollNumber ?: '-'}">-</td>
+                                <td style="text-align:center; font-weight:600;" th:text="${s.percentage} + '%'">0%</td>
+                                <td style="text-align:center;">
+                                    <span th:if="${s.category == 'Excellent'}" class="cat-excellent">Excellent</span>
+                                    <span th:if="${s.category == 'Very Good'}" class="cat-very-good">Very Good</span>
+                                    <span th:if="${s.category == 'Average'}" class="cat-average">Average</span>
+                                    <span th:if="${s.category == 'Needs Improvement'}"
+                                        class="cat-needs-improvement">Needs Improvement</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- end data check -->
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const testNames = /*[[${analytics.testNames}]]*/[];
+        const classAvgPerTest = /*[[${analytics.classAveragePerTest}]]*/[];
+        const top5Names = /*[[${analytics.top5Students.![studentName]}]]*/[];
+        const top5Perc = /*[[${analytics.top5Students.![percentage]}]]*/[];
+
+        const chartDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: '#1e293b', titleColor: '#f1f5f9', bodyColor: '#94a3b8', borderColor: '#334155', borderWidth: 1 }
+            },
+            scales: {
+                x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: 'rgba(51,65,85,0.5)' } },
+                y: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: 'rgba(51,65,85,0.5)' }, beginAtZero: true }
+            }
+        };
+
+        // Bar chart – class avg per test
+        if (document.getElementById('barChart') && testNames.length > 0) {
+            new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: {
+                    labels: testNames,
+                    datasets: [{
+                        label: 'Class Average',
+                        data: classAvgPerTest,
+                        backgroundColor: 'rgba(99,102,241,0.6)',
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }]
+                },
+                options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, max: 100 } } }
+            });
+        }
+
+        // Top 5 horizontal bar
+        if (document.getElementById('top5Chart') && top5Names.length > 0) {
+            new Chart(document.getElementById('top5Chart'), {
+                type: 'bar',
+                data: {
+                    labels: top5Names,
+                    datasets: [{
+                        label: 'Percentage',
+                        data: top5Perc,
+                        backgroundColor: ['rgba(16,185,129,0.7)', 'rgba(14,165,233,0.7)', 'rgba(99,102,241,0.7)', 'rgba(245,158,11,0.7)', 'rgba(239,68,68,0.5)'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    ...chartDefaults,
+                    indexAxis: 'y',
+                    scales: {
+                        x: { ...chartDefaults.scales.x, max: 100 },
+                        y: { ...chartDefaults.scales.y }
+                    }
+                }
+            });
+        }
+        /*]]>*/
+    </script>
+</body>
+
+</html>

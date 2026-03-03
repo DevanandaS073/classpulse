@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard – ClassPulse</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-brand">Class<span>Pulse</span></div>
+        <div class="nav-actions">
+            <div class="nav-user">
+                <div class="avatar" th:text="${teacher.name.substring(0,1).toUpperCase()}">T</div>
+                <span th:text="${teacher.name}">Teacher</span>
+            </div>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <div class="container page-content">
+
+        <!-- Alerts -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${param.classLimitReached}" class="alert alert-warning">
+            ⚠ You have reached the maximum limit of 3 classes.
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-title">
+                <h2>My Classes</h2>
+                <p>Manage your classes, students and tests</p>
+            </div>
+            <div>
+                <span class="badge badge-primary" th:text="${classCount + ' / 3 classes'}">0 / 3 classes</span>
+            </div>
+        </div>
+
+        <!-- Classes Grid -->
+        <div class="classes-grid">
+
+            <!-- Existing class cards -->
+            <div th:each="cls : ${classes}" class="class-card">
+                <div class="class-card-title" th:text="${cls.name}">Class Name</div>
+                <div class="class-card-subtitle">
+                    <span
+                        th:text="${cls.academicYear == T(com.classpulse.model.AcademicYear).FIRST_YEAR ? 'First Year' : 'Second Year'}">Year</span>
+                </div>
+                <div class="class-card-meta">
+                    <span class="badge badge-secondary" th:text="${cls.subject}">Subject</span>
+                    <span class="badge badge-primary" th:text="${cls.students.size()} + ' students'">0 students</span>
+                    <span class="badge badge-warning" th:text="${cls.tests.size()} + ' tests'">0 tests</span>
+                </div>
+                <div class="class-card-footer">
+                    <a th:href="@{/classes/{id}(id=${cls.id})}" class="btn btn-primary btn-sm">Open Class</a>
+                    <a th:href="@{/classes/{id}/analytics(id=${cls.id})}" class="btn btn-secondary btn-sm">Analytics</a>
+                    <form th:action="@{/classes/{id}/delete(id=${cls.id})}" method="post" style="margin-left:auto;"
+                        onsubmit="return confirm('Delete this class? All students and marks will be lost.')">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Add new class card -->
+            <a th:href="@{/classes/create}" th:classappend="${!canCreateClass ? ' disabled' : ''}"
+                class="class-card class-card-new"
+                th:title="${!canCreateClass ? 'Maximum 3 classes reached' : 'Create a new class'}">
+                <div class="plus-icon">＋</div>
+                <div style="font-weight:600; font-size:0.95rem;">Create New Class</div>
+                <div style="font-size:0.8rem; margin-top:0.25rem;"
+                    th:text="${!canCreateClass ? 'Limit of 3 classes reached' : 'Click to add a class'}">
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Empty state -->
+        <div th:if="${classes.isEmpty()}" class="empty-state" style="margin-top: 1rem;">
+            <div class="empty-icon">📚</div>
+            <p>You haven't created any classes yet. Click "Create New Class" to get started!</p>
+        </div>
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,29 @@
+# Build output
+/target/
+
+# IDE files
+/.idea/
+*.iml
+*.iws
+*.ipr
+
+# Logs
+*.log
+build.log
+
+# Maven wrapper downloads
+tools/
+
+# Compiled classes
+*.class
+
+# Sensitive config — do NOT commit real passwords
+src/main/resources/application.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Scripts
+download-maven.ps1
+run-build.ps1

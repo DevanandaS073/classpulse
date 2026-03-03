@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="'Test Analytics – ' + ${test.name} + ' – ClassPulse'">Test Analytics – ClassPulse</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">Class<span>Pulse</span></div>
+        <div class="nav-actions">
+            <a th:href="@{/classes/{id}(id=${classId})}" class="btn btn-secondary btn-sm">← Back to Class</a>
+            <a th:href="@{/classes/{id}/analytics(id=${classId})}" class="btn btn-primary btn-sm">📊 Overall
+                Analytics</a>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container page-content">
+
+        <!-- Header -->
+        <div class="page-header">
+            <div class="page-header-title">
+                <div class="breadcrumb">
+                    <a th:href="@{/dashboard}">Dashboard</a>
+                    <span class="sep">›</span>
+                    <a th:href="@{/classes/{id}(id=${classId})}" th:text="${schoolClass.name}">Class</a>
+                    <span class="sep">›</span>
+                    <span>Test Analytics</span>
+                </div>
+                <h2 th:text="'Analytics: ' + ${test.name}">Test Analytics</h2>
+                <p>
+                    <span class="badge badge-primary" th:text="'Max Marks: ' + ${test.maxMarks}">Max: 100</span>
+                    <span class="badge badge-secondary" style="margin-left:0.4rem;"
+                        th:text="${schoolClass.subject}">Subject</span>
+                    <span class="badge badge-warning" style="margin-left:0.4rem;" th:text="${test.testDate}"
+                        th:if="${test.testDate != null}">Date</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- No marks state -->
+        <div th:if="${testAnalytics.marksEntered == 0}" class="card">
+            <div class="empty-state">
+                <div class="empty-icon">📝</div>
+                <p>No marks entered for this test yet.</p>
+                <a th:href="@{/classes/{cid}/tests/{tid}/marks(cid=${classId},tid=${test.id})}" class="btn btn-primary"
+                    style="margin-top:1rem;">✏ Enter Marks</a>
+            </div>
+        </div>
+
+        <div th:if="${testAnalytics.marksEntered > 0}">
+
+            <!-- Summary Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${testAnalytics.totalStudents}">0</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" th:text="${testAnalytics.classAverage}">0</div>
+                    <div class="stat-label">Class Average</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${testAnalytics.highestMark}">0</div>
+                    <div class="stat-label">Highest Mark</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" th:text="${testAnalytics.lowestMark}">0</div>
+                    <div class="stat-label">Lowest Mark</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value" th:text="${testAnalytics.studentsBelow40.size()}">0</div>
+                    <div class="stat-label">Below 40%</div>
+                </div>
+            </div>
+
+            <!-- Top / Bottom student -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+                <div class="card">
+                    <div class="card-body" style="text-align:center;">
+                        <div style="font-size:2rem; margin-bottom:0.25rem;">🏆</div>
+                        <div
+                            style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;">
+                            Top Scorer</div>
+                        <div style="font-size:1.2rem; font-weight:700; margin-top:0.25rem;"
+                            th:text="${testAnalytics.topStudentName}">–</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align:center;">
+                        <div style="font-size:2rem; margin-bottom:0.25rem;">📉</div>
+                        <div
+                            style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;">
+                            Lowest Scorer</div>
+                        <div style="font-size:1.2rem; font-weight:700; margin-top:0.25rem;"
+                            th:text="${testAnalytics.bottomStudentName}">–</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bar chart -->
+            <div class="card" style="margin-bottom:1.5rem;">
+                <div class="card-header"><span class="card-title">Marks Distribution</span></div>
+                <div class="card-body">
+                    <div class="chart-container" style="height:260px;">
+                        <canvas id="marksChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Marks table -->
+            <div class="card" style="margin-bottom:1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">All Students</span>
+                    <div style="display:flex; gap:0.5rem;">
+                        <a th:href="@{/classes/{cid}/tests/{tid}/marks/view(cid=${classId},tid=${test.id})}"
+                            class="btn btn-secondary btn-sm">📋 Mark List</a>
+                        <a th:href="@{/classes/{cid}/tests/{tid}/marks(cid=${classId},tid=${test.id})}"
+                            class="btn btn-primary btn-sm">✏ Edit Marks</a>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th style="text-align:center;">Marks</th>
+                                <th style="text-align:center;">/ Max</th>
+                                <th style="text-align:center;">Percentage</th>
+                                <th style="text-align:center;">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row : ${testAnalytics.rows}">
+                                <td th:text="${row.rollNumber ?: '-'}">-</td>
+                                <td th:text="${row.studentName}">Name</td>
+                                <td style="text-align:center; font-weight:700;"
+                                    th:text="${row.marksObtained != null ? row.marksObtained : '–'}">–</td>
+                                <td style="text-align:center; color:var(--text-muted);" th:text="${test.maxMarks}">100
+                                </td>
+                                <td style="text-align:center;" th:if="${row.marksObtained != null}">
+                                    <span th:text="${row.percentage} + '%'" style="font-weight:600;"></span>
+                                    <div class="progress-bar-wrap" style="margin-top:4px;">
+                                        <div class="progress-bar" th:style="'width:' + ${row.percentage} + '%'"></div>
+                                    </div>
+                                </td>
+                                <td style="text-align:center; color:var(--text-muted);"
+                                    th:if="${row.marksObtained == null}">–</td>
+                                <td style="text-align:center;">
+                                    <span th:if="${row.category == 'Excellent'}" class="cat-excellent">Excellent</span>
+                                    <span th:if="${row.category == 'Very Good'}" class="cat-very-good">Very Good</span>
+                                    <span th:if="${row.category == 'Average'}" class="cat-average">Average</span>
+                                    <span th:if="${row.category == 'Needs Improvement'}"
+                                        class="cat-needs-improvement">Needs Improvement</span>
+                                    <span th:if="${row.category == '-'}"
+                                        style="color:var(--text-muted); font-size:0.8rem;">Not Entered</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Below 40% alert -->
+            <div th:if="${!testAnalytics.studentsBelow40.isEmpty()}" class="card">
+                <div class="card-header" style="background:rgba(239,68,68,0.08);">
+                    <span class="card-title" style="color:var(--danger);">⚠ Students Below 40%</span>
+                    <span class="badge badge-danger"
+                        th:text="${testAnalytics.studentsBelow40.size()} + ' students'"></span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th style="text-align:center;">Marks</th>
+                                <th style="text-align:center;">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row : ${testAnalytics.studentsBelow40}"
+                                style="background:rgba(239,68,68,0.05);">
+                                <td th:text="${row.studentName}">Name</td>
+                                <td style="text-align:center;" th:text="${row.marksObtained}">0</td>
+                                <td style="text-align:center; color:var(--danger); font-weight:700;"
+                                    th:text="${row.percentage} + '%'">0%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── Mark Range Classification ─────────────────────────────── -->
+            <div class="card" style="margin-top:1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">📊 Mark Range Classification</span>
+                    <span class="badge badge-secondary" th:text="'Out of ' + ${test.maxMarks}">Out of 100</span>
+                </div>
+
+                <!-- Range bands – iterate in descending order (highest first) -->
+                <div th:each="range, rStat : ${testAnalytics.markRanges}"
+                    style="border-bottom: 1px solid var(--border);"
+                    th:style="${rStat.last} ? '' : 'border-bottom: 1px solid var(--border);'">
+
+                    <!-- Range header bar -->
+                    <div style="display:flex; align-items:center; justify-content:space-between;
+                                padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.03);">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <!-- colour dot -->
+                            <span th:if="${range.rangeCategory == 'Excellent'}"
+                                style="width:12px;height:12px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                            <span th:if="${range.rangeCategory == 'Very Good'}"
+                                style="width:12px;height:12px;border-radius:50%;background:#6366f1;display:inline-block;"></span>
+                            <span th:if="${range.rangeCategory == 'Average'}"
+                                style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                            <span th:if="${range.rangeCategory == 'Needs Improvement'}"
+                                style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+
+                            <span style="font-weight:700; font-size:1rem;" th:text="'Marks ' + ${range.label}">Marks
+                                21–30</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <span class="badge"
+                                th:classappend="${range.rangeCategory == 'Excellent'} ? 'badge-success' :
+                                                  (${range.rangeCategory == 'Very Good'} ? 'badge-primary' :
+                                                  (${range.rangeCategory == 'Average'} ? 'badge-warning' : 'badge-danger'))"
+                                th:text="${range.rangeCategory}">Category</span>
+                            <span class="badge badge-secondary" th:text="${range.students.size()} + ' student(s)'">0
+                                students</span>
+                        </div>
+                    </div>
+
+                    <!-- Students in this range -->
+                    <div th:if="${range.students.isEmpty()}"
+                        style="padding:0.6rem 1.25rem 0.75rem; color:var(--text-muted); font-size:0.875rem;">
+                        No students in this range.
+                    </div>
+
+                    <div th:if="${!range.students.isEmpty()}" class="table-wrapper" style="margin:0;">
+                        <table style="font-size:0.875rem;">
+                            <thead>
+                                <tr>
+                                    <th>Roll No.</th>
+                                    <th>Student Name</th>
+                                    <th style="text-align:center;">Marks Obtained</th>
+                                    <th style="text-align:center;">Percentage</th>
+                                    <th style="text-align:center;">Comment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="s : ${range.students}">
+                                    <td th:text="${s.rollNumber ?: '-'}">-</td>
+                                    <td style="font-weight:600;" th:text="${s.studentName}">Name</td>
+                                    <td style="text-align:center; font-weight:700;" th:text="${s.marksObtained}">0</td>
+                                    <td style="text-align:center;">
+                                        <span th:text="${s.percentage} + '%'" style="font-weight:600;"></span>
+                                        <div class="progress-bar-wrap" style="margin-top:3px;">
+                                            <div class="progress-bar" th:style="'width:' + ${s.percentage} + '%'"></div>
+                                        </div>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <span th:if="${s.category == 'Excellent'}"
+                                            class="cat-excellent">Excellent</span>
+                                        <span th:if="${s.category == 'Very Good'}" class="cat-very-good">Very
+                                            Good</span>
+                                        <span th:if="${s.category == 'Average'}" class="cat-average">Average</span>
+                                        <span th:if="${s.category == 'Needs Improvement'}"
+                                            class="cat-needs-improvement">Needs Improvement</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div><!-- end range -->
+            </div><!-- end classification card -->
+
+        </div><!-- end marksEntered check -->
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const studentNames = /*[[${testAnalytics.studentNames}]]*/[];
+        const studentMarks = /*[[${testAnalytics.studentMarks}]]*/[];
+        const maxMarks = /*[[${test.maxMarks}]]*/ 100;
+
+        if (document.getElementById('marksChart') && studentNames.length > 0) {
+            new Chart(document.getElementById('marksChart'), {
+                type: 'bar',
+                data: {
+                    labels: studentNames,
+                    datasets: [{
+                        label: 'Marks Obtained',
+                        data: studentMarks,
+                        backgroundColor: studentMarks.map(m =>
+                            (m / maxMarks * 100) >= 75 ? 'rgba(16,185,129,0.65)' :
+                                (m / maxMarks * 100) >= 50 ? 'rgba(99,102,241,0.65)' :
+                                    (m / maxMarks * 100) >= 40 ? 'rgba(245,158,11,0.65)' :
+                                        'rgba(239,68,68,0.65)'
+                        ),
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b', titleColor: '#f1f5f9', bodyColor: '#94a3b8',
+                            callbacks: {
+                                label: ctx => ` ${ctx.parsed.y} / ${maxMarks}  (${Math.round(ctx.parsed.y / maxMarks * 1000) / 10}%)`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(51,65,85,0.5)' } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(51,65,85,0.5)' }, beginAtZero: true, max: maxMarks }
+                    }
+                }
+            });
+        }
+        /*]]>*/
+    </script>
+</body>
+
+</html>
